@@ -1,0 +1,26 @@
+{
+  "intent": {
+    "accuracy": 1.0,
+    "report": "              precision    recall  f1-score   support\n\n   aggregate       1.00      1.00      1.00        48\n correlation       1.00      1.00      1.00        34\ndistribution       1.00      1.00      1.00        10\n     drivers       1.00      1.00      1.00         1\n        list       1.00      1.00      1.00         8\n     ranking       1.00      1.00      1.00        32\n     unknown       1.00      1.00      1.00         1\n\n    accuracy                           1.00       134\n   macro avg       1.00      1.00      1.00       134\nweighted avg       1.00      1.00      1.00       134\n",
+    "rows": 668
+  },
+  "clarification": {
+    "accuracy_train": 1.0,
+    "rows": 80
+  },
+  "sql_template_retriever": {
+    "rows": 668
+  },
+  "repair": {
+    "rows": 16,
+    "train_accuracy": 1.0
+  },
+  "confidence": {
+    "rows": 6000,
+    "rmse_train": 1.300320516172988
+  },
+  "schema_retriever": {
+    "documents": 708,
+    "features": 1242
+  }
+}
