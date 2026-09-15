@@ -1,0 +1,28 @@
+# secrets — never commit API keys
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# dependencies & builds
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+.venv/
+__pycache__/
+*.pyc
+
+# generated databases (rebuilt from backend/datasets/*/source.csv on startup)
+backend/data/
+*.db
+*.tmp
+
+# originals of the dataset CSVs; the app uses the copies in backend/datasets/
+/StudentPerformanceFactors.csv
+/data.csv.xls
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
