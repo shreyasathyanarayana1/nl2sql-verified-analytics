@@ -7,7 +7,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from app import auth, store
+from app import auth, llm, store
 from app.agents import access_control, evidence, schema_reasoning
 from app.config import AMBIGUITY_THRESHOLD, CORS_ORIGINS, MAX_REPAIR_ATTEMPTS, SCHEMA_TOP_K
 from app.datasets import Dataset, load_all
@@ -28,7 +28,6 @@ def load_datasets() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    llm.check_available()
     load_datasets()
     yield
 

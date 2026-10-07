@@ -15,9 +15,16 @@ export interface Filter {
   label: string;
 }
 
+export interface MlPrediction {
+  enabled: boolean;
+  prediction?: string | number;
+  confidence?: number;
+}
+
 export interface Intent {
   raw: string;
   dataset: string;
+  ml_intent?: MlPrediction;
   kind: "aggregate" | "ranking" | "list" | "distribution" | "correlation" | "drivers" | "unknown";
   measures: { col: string | null; agg: string | null }[];
   group_by: { col: string; bin: number | null }[];
@@ -57,6 +64,7 @@ export interface ClarificationOption {
 }
 
 export interface Ambiguity {
+  ml_classifier?: MlPrediction;
   ambiguity_score: number;
   threshold: number;
   signals: { type: string; weight: number; detail: string }[];
@@ -202,6 +210,14 @@ export interface Evidence {
   exec_ms: number;
 }
 
+export interface NarrativeSection {
+  key: string;
+  title: string;
+  paragraphs: string[];
+  bullets: string[];
+  bullets_after: number;
+}
+
 export interface PipelineResponse {
   response_id: string;
   dataset_id: string;
@@ -228,6 +244,7 @@ export interface PipelineResponse {
   confidence: Confidence | null;
   followups: string[];
   auto_resolved: { original: string; chosen: string; compared: string[]; detail: string } | null;
+  narrative: { sections: NarrativeSection[] } | null;
   trace: TraceStep[];
   latency_ms: number;
 }

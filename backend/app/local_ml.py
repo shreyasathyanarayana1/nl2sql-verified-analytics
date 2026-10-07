@@ -13,10 +13,30 @@ MODEL_DIR = BASE_DIR / "models"
 _CACHE: Dict[str, Any] = {}
 
 
+def restore_compat(obj: Any) -> Any:
+    """Make artifacts pickled by a newer scikit-learn usable by the installed one.
+
+    scikit-learn >= 1.7 dropped `LogisticRegression.multi_class`, but 1.6's
+    `predict_proba` still reads it, so an unpickled classifier raises AttributeError.
+    Restoring the historical default ("auto") reproduces the training-time behaviour:
+    softmax for the multiclass lbfgs models used here.
+    """
+    from sklearn.linear_model import LogisticRegression
+
+    candidates = [obj]
+    if isinstance(obj, dict):
+        candidates += list(obj.values())
+    candidates += list(getattr(obj, "named_steps", {}).values())
+    for item in candidates:
+        if isinstance(item, LogisticRegression) and not hasattr(item, "multi_class"):
+            item.multi_class = "auto"
+    return obj
+
+
 def _load(name: str):
     if name not in _CACHE:
         path = MODEL_DIR / name
-        _CACHE[name] = joblib.load(path) if path.exists() else None
+        _CACHE[name] = restore_compat(joblib.load(path)) if path.exists() else None
     return _CACHE[name]
 
 

@@ -28,19 +28,16 @@ export default function Shell({ user, title, sidebar, actions, children }: Props
     <div className="shell">
       <aside className={`sidebar ${open ? "open" : ""}`} onClick={(e) => e.target === e.currentTarget && setOpen(false)}>
         <div className="brand">
-          <div className="brand-mark">NL</div>
-          <div>
-            <div className="brand-title">Verified Analytics</div>
-            <div className="brand-sub">Hallucination-resistant NL2SQL</div>
-          </div>
+          <div className="brand-title">Verified Analytics</div>
+          <div className="brand-sub">question → SQL → verify → answer</div>
         </div>
         <nav className="nav">
           <Link href="/chat" className={pathname === "/chat" ? "active" : ""} onClick={() => setOpen(false)}>
-            <span aria-hidden>💬</span> Ask a question
+            <span className="nav-no">01</span> Ask a question
           </Link>
           {user.role === "admin" && (
             <Link href="/admin" className={pathname === "/admin" ? "active" : ""} onClick={() => setOpen(false)}>
-              <span aria-hidden>🛠️</span> Administration
+              <span className="nav-no">02</span> Administration
             </Link>
           )}
         </nav>
@@ -48,8 +45,8 @@ export default function Shell({ user, title, sidebar, actions, children }: Props
         <div className="sidebar-footer">
           <div className="avatar">{user.display_name.slice(0, 1)}</div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ color: "#fff", fontWeight: 500 }}>{user.display_name}</div>
-            <div style={{ fontSize: 12, color: "#64748b" }}>
+            <div className="user-name">{user.display_name}</div>
+            <div className="user-meta">
               {user.username} · {user.role === "admin" ? "Administrator" : "Insights User"}
             </div>
           </div>

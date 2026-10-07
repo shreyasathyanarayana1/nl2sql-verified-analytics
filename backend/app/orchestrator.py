@@ -12,7 +12,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from app import store
 from app.agents import (access_control, anti_hallucination, clarification, confidence, data_quality, execution,
-                        followups, intent as intent_agent, planning, repair, result_checks, schema_reasoning,
+                        followups, intent as intent_agent, narrative, planning, repair, result_checks, schema_reasoning,
                         sql_generation, visualization)
 from app.config import MAX_REPAIR_ATTEMPTS
 from app.datasets import Dataset
@@ -33,6 +33,7 @@ AGENTS = [
     {"key": "result_checks", "step": "8b", "name": "Result Verification"},
     {"key": "quality", "step": "8c", "name": "Data Quality & Confidence"},
     {"key": "visualization", "step": "9", "name": "Visualization"},
+    {"key": "explanation", "step": "10", "name": "Explanation"},
 ]
 AGENT_NAMES = {a["key"]: a["name"] for a in AGENTS}
 
@@ -81,7 +82,7 @@ class Pipeline:
             "schema_context": None, "access_scope": access_control.resolve_scope(self.ds, user["role"]), "plan": None,
             "attempts": [], "sql": None, "final_sql": None, "result": None, "visualization": None, "warnings": [],
             "injected": None, "result_checks": None, "result_repaired": False, "data_warnings": [], "confidence": None,
-            "followups": [], "auto_resolved": None, "started": time.perf_counter(),
+            "followups": [], "auto_resolved": None, "narrative": None, "started": time.perf_counter(),
         }
         node = "intent"
         while node != END:
@@ -178,7 +179,8 @@ class Pipeline:
                 summary += f" · evaluation: injected {injected['type']} hallucination"
         state["sql"] = sql
         state["attempts"].append({"attempt": 1, "sql": sql, "source": out["model"], "validation": None, "repair": None})
-        self.record(state, "generation", "done", t0, summary, {"sql": sql, "injected": state["injected"]})
+        self.record(state, "generation", "done", t0, summary,
+                    {"sql": sql, "injected": state["injected"], "template": out.get("ml_generation")})
         return "verification"
 
     def node_verification(self, state) -> str:
@@ -280,8 +282,13 @@ class Pipeline:
         state["visualization"] = visualization.build(self.ds, self.sem, state["intent"], state["result"], state["plan"])
         state["followups"] = followups.suggest(self.ds, state["intent"], state["result"], state["visualization"],
                                                state["access_scope"], state["question"])
-        state["status"] = "completed"
         self.record(state, "visualization", "done", t0, f"chart: {state['visualization']['chart_type']}")
+        t0 = time.perf_counter()
+        state["narrative"] = narrative.build(self.ds, self.sem, state)
+        state["status"] = "completed"
+        sections = state["narrative"]["sections"]
+        self.record(state, "explanation", "done", t0,
+                    f"{len(sections)} sections · {sum(len(s['paragraphs']) + len(s['bullets']) for s in sections)} statements, all computed from the result")
         return END
 
     # ------------------------------------------------------------------ interpretations
@@ -376,5 +383,5 @@ class Pipeline:
             "final_sql": state["final_sql"], "result": _trim(state["result"]), "visualization": state["visualization"],
             "column_labels": self.sem.column_labels(), "result_checks": state["result_checks"], "data_warnings": state["data_warnings"],
             "confidence": state["confidence"], "followups": state["followups"], "auto_resolved": state["auto_resolved"],
-            "trace": state["trace"], "latency_ms": latency,
+            "narrative": state["narrative"], "trace": state["trace"], "latency_ms": latency,
         }

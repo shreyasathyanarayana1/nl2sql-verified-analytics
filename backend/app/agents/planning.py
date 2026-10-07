@@ -71,7 +71,7 @@ def _where(sem: Semantic, intent: Dict[str, Any], joins: List[str]) -> List[str]
 
 def _filter_steps(intent: Dict[str, Any]) -> List[str]:
     labels = [f["label"] for f in intent["filters"]]
-    return ["Keep only rows with " + ", ".join(labels) + "."] if labels else []
+    return ["Keep only the rows that match: " + "; ".join(labels) + "."] if labels else []
 
 
 def _join_steps(sem: Semantic, joins: List[str]) -> List[str]:

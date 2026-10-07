@@ -1,0 +1,19 @@
+# secrets
+.env
+.env.*
+
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# generated databases (rebuilt from backend/datasets/*/source.csv on startup)
+backend/data/
+
+# node / next
+node_modules/
+.next/
+*.tsbuildinfo
+
+# os
+.DS_Store

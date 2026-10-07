@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import AnswerCard from "@/components/AnswerCard";
+import { LiveAgents } from "@/components/AgentRun";
 import EvidenceDrawer, { EvidenceState } from "@/components/EvidenceDrawer";
 import Shell from "@/components/Shell";
 import { api } from "@/lib/api";
@@ -12,31 +13,14 @@ import { useDatasets } from "@/lib/useDatasets";
 interface Turn {
   id: number;
   question: string;
+  isReply: boolean;
+  at: Date;
   response: PipelineResponse | null;
   error: string | null;
 }
 
-const STAGES = [
-  "Understanding your question…",
-  "Finding the relevant tables…",
-  "Planning and writing the query…",
-  "Checking the query for mistakes…",
-  "Running it and cross-checking the answer…",
-];
-
-function Thinking() {
-  const [stage, setStage] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setStage((s) => Math.min(s + 1, STAGES.length - 1)), 450);
-    return () => clearInterval(t);
-  }, []);
-  return (
-    <div className="card thinking">
-      <span className="spinner" />
-      <span>{STAGES[stage]}</span>
-    </div>
-  );
-}
+const entryNo = (n: number) => `Q.${String(n).padStart(2, "0")}`;
+const clock = (d: Date) => d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
 export default function ChatPage() {
   const user = useAuth();
@@ -67,9 +51,9 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [turns]);
 
-  const run = useCallback(async (question: string, call: () => Promise<PipelineResponse>) => {
+  const run = useCallback(async (question: string, call: () => Promise<PipelineResponse>, isReply = false) => {
     const id = nextId.current++;
-    setTurns((t) => [...t, { id, question, response: null, error: null }]);
+    setTurns((t) => [...t, { id, question, isReply, at: new Date(), response: null, error: null }]);
     setBusy(true);
     try {
       const response = await call();
@@ -91,7 +75,7 @@ export default function ChatPage() {
 
   const clarify = (optionId: string | null, text: string | null, label: string) => {
     if (!sessionId || busy) return;
-    run(label, () => api.clarify(sessionId, optionId, text));
+    run(label, () => api.clarify(sessionId, optionId, text), true);
   };
 
   const openEvidence = useCallback(async (response: PipelineResponse, key: string | number | null, title: string) => {
@@ -137,7 +121,7 @@ export default function ChatPage() {
           <div className="sidebar-section">Recent</div>
           <div className="sidebar-body">
             {recent.map((q) => (
-              <button key={q} className="suggestion" onClick={() => ask(q)} disabled={busy}>↺ {q}</button>
+              <button key={q} className="suggestion" onClick={() => ask(q)} disabled={busy}>{q}</button>
             ))}
           </div>
         </>
@@ -146,7 +130,7 @@ export default function ChatPage() {
       <div className="sidebar-body">
         {suggestions.map((g) => (
           <details key={g.group} className="topic" open={g === suggestions[0]}>
-            <summary><span aria-hidden>{g.icon}</span> {g.group}</summary>
+            <summary>{g.group}</summary>
             {g.questions.map((q) => (
               <button key={q} className="suggestion" onClick={() => ask(q)} disabled={busy}>{q}</button>
             ))}
@@ -170,10 +154,10 @@ export default function ChatPage() {
         <>
           {aiStatus && (
             <span className="badge hide-mobile badge-success" title={aiStatus.reason ?? "Local ML pipeline is active"}>
-              <span className="dot" />Local ML
+              <span className="dot" />local models
             </span>
           )}
-          <button className="btn btn-sm" onClick={newConversation} disabled={busy || turns.length === 0}>New chat</button>
+          <button className="btn btn-sm" onClick={newConversation} disabled={busy || turns.length === 0}>New session</button>
         </>
       }
     >
@@ -181,16 +165,12 @@ export default function ChatPage() {
         <div className="messages">
           {turns.length === 0 && (
             <div className="welcome">
-              <h2>What would you like to know?</h2>
-              {datasetError && <div className="notice notice-danger" style={{ margin: "0 0 12px" }}>{datasetError}</div>}
+              {datasetError && <div className="notice notice-danger">{datasetError}</div>}
               {dataset && (
                 <div className="dataset-card">
-                  <div>
-                    <div className="eyebrow">Now exploring</div>
-                    <strong>{dataset.name}</strong>
-                    <p className="muted" style={{ margin: "4px 0 0" }}>{dataset.description}</p>
-                    <p className="subtle" style={{ margin: "6px 0 0", fontSize: 12.5 }}>Source: {dataset.source}</p>
-                  </div>
+                  <div className="eyebrow">Dataset · {dataset.source}</div>
+                  <h2>{dataset.name}</h2>
+                  <p className="muted" style={{ margin: 0 }}>{dataset.description}</p>
                   <div className="dataset-stats">
                     <div><span>{dataset.rows.toLocaleString()}</span>{dataset.entity.plural}</div>
                     <div><span>{dataset.columns}</span>columns</div>
@@ -199,13 +179,14 @@ export default function ChatPage() {
                 </div>
               )}
               <p className="muted">
-                Ask in plain English. Every answer is checked before you see it, comes with a confidence score, and lets you
-                click through to the rows behind it.
+                Ask in plain English. Each question is turned into SQL, checked against the real schema before it runs,
+                and cross-checked after. Every answer is stamped with how well it held up, and links back to the rows
+                that produced it.
               </p>
               <div className="topic-grid">
                 {suggestions.filter((g) => !g.group.startsWith("Needs")).map((g) => (
                   <div key={g.group} className="topic-card">
-                    <div className="topic-head"><span aria-hidden>{g.icon}</span>{g.group}</div>
+                    <div className="topic-head">{g.group}</div>
                     {g.questions.slice(0, 3).map((q) => (
                       <button key={q} onClick={() => ask(q)}>{q}</button>
                     ))}
@@ -215,10 +196,14 @@ export default function ChatPage() {
             </div>
           )}
           {turns.map((t, i) => (
-            <div key={t.id} className="stack" style={{ gap: 10 }}>
-              <div className="user-bubble">{t.question}</div>
-              {!t.response && !t.error && <Thinking />}
-              {t.error && <div className="card notice notice-danger" style={{ margin: 0 }}>{t.error}</div>}
+            <article key={t.id} className="entry">
+              <header className="entry-head">
+                <span className="entry-no">{entryNo(i + 1)}</span>
+                <h2 className={`entry-q${t.isReply ? " reply" : ""}`}>{t.question}</h2>
+                <time className="entry-time" dateTime={t.at.toISOString()}>{clock(t.at)}</time>
+              </header>
+              {!t.response && !t.error && <LiveAgents />}
+              {t.error && <div className="notice notice-danger">{t.error}</div>}
               {t.response && (
                 <AnswerCard
                   response={t.response}
@@ -229,7 +214,7 @@ export default function ChatPage() {
                   busy={busy}
                 />
               )}
-            </div>
+            </article>
           ))}
           <div ref={bottomRef} />
         </div>
@@ -242,6 +227,7 @@ export default function ChatPage() {
               ask(input);
             }}
           >
+            <span className="composer-no" aria-hidden>{entryNo(turns.length + 1)}</span>
             <textarea
               ref={inputRef}
               rows={1}
@@ -262,8 +248,8 @@ export default function ChatPage() {
             </button>
           </form>
           <div className="composer-hint">
-            <span>Enter to send</span>
-            <span>Follow up naturally, e.g. “only for …” or “what about …”</span>
+            <span>↵ run · ⇧↵ new line</span>
+            <span>follow-ups refine the previous entry: “only for …”, “what about …”</span>
           </div>
         </div>
       </div>

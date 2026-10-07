@@ -1,10 +1,4 @@
-"""Agent 2 — Query Clarification.
 
-Scores ambiguity from independent signals found by the Intent Agent. Above the threshold
-the pipeline pauses and asks exactly one focused question — built from the dataset's own
-columns — instead of guessing. Every option carries a complete rewritten question, so the
-orchestrator can run each interpretation before deciding whether asking is even necessary.
-"""
 import re
 from typing import Any, Dict, List, Set
 

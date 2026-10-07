@@ -3,13 +3,10 @@ import type { Confidence, PipelineResponse } from "@/lib/types";
 const LEVEL_CLASS = { high: "trust-high", medium: "trust-medium", low: "trust-low" } as const;
 
 export function TrustBadge({ confidence, onClick, open }: { confidence: Confidence; onClick: () => void; open: boolean }) {
-  const icon = confidence.level === "high" ? "✓" : confidence.level === "medium" ? "!" : "✕";
   return (
     <button className={`trust-badge ${LEVEL_CLASS[confidence.level]}`} onClick={onClick} aria-expanded={open}>
-      <span className="trust-icon">{icon}</span>
-      <span>{confidence.label}</span>
-      <span className="trust-score">{confidence.score}</span>
-      <span className="trust-caret">{open ? "▴" : "▾"}</span>
+      <span className="trust-label">{confidence.label}</span>
+      <span className="trust-score">score {confidence.score}/100 · {open ? "hide" : "why"}</span>
     </button>
   );
 }
@@ -26,7 +23,7 @@ export function TrustPanel({ response }: { response: PipelineResponse }) {
     <div className="trust-panel">
       <div className="trust-meter">
         <div className="trust-meter-bar"><span className={LEVEL_CLASS[c.level]} style={{ width: `${c.score}%` }} /></div>
-        <span className="subtle" style={{ fontSize: 12.5 }}>{c.score}/100</span>
+        <span className="mono subtle" style={{ fontSize: 12 }}>{c.score}/100</span>
       </div>
 
       <div className="trust-grid">
