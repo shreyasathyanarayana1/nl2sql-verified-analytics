@@ -51,6 +51,35 @@ def _signals(ds: Dataset, intent: Dict[str, Any], denied: Set[str]) -> List[Dict
                 "question": f"Which measure should I use for {what}?",
                 "options": _measure_options(ds, raw, denied, numeric_only),
             })
+    
+    # Detect an unrecognized grouping requested after "by".
+    group_match = re.search(r"\bby\s+([^,?.;]+)", raw, re.I)
+    if group_match and intent["unknown_terms"] and not intent.get("group_by"):
+        start, end = group_match.span(1)
+        options = []
+
+        for col in ds.columns.values():
+            if col.name in denied:
+                continue
+
+            label = col.label[:1].upper() + col.label[1:]
+            options.append({
+                "id": col.name,
+                "label": label,
+                "question": raw[:start] + col.label + raw[end:]
+            })
+
+        if options:
+            signals.append({
+                "type": "unsupported_intent",
+                "weight": 1.0,
+                "detail": (
+                    f"Couldn't identify the requested grouping "
+                    f"“{group_match.group(1).strip()}” in {ds.name}."
+                ),
+                "question": "Which column did you want to group by?",
+                "options": options[:5],
+            })
 
     for amb in intent["ambiguous_values"]:
         options = []
