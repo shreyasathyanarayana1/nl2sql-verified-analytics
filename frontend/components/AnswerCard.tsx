@@ -31,7 +31,7 @@ function Clarification({ response, onClarify, disabled }: { response: PipelineRe
       <div className="answer-body">
         <div className="eyebrow" style={{ color: "var(--warning)" }}>Ambiguous — clarification needed</div>
         <div className="clarify-q">{c.question}</div>
-        {hasPreviews && (
+        {hasPreviews && c.options.length > 1 && (
           <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>
             Each reading was run against the data. They give different answers, so the choice matters:
           </p>

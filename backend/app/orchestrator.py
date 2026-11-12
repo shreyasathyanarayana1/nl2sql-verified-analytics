@@ -110,7 +110,7 @@ class Pipeline:
         t0 = time.perf_counter()
         suppressed = list(state["suppressed"])
         if state["clarification_rounds"] >= 2:
-            suppressed += ["missing_measure", "unknown_measure", "ambiguous_value", "unsupported_intent"]
+            suppressed += ["missing_measure", "unknown_measure", "ambiguous_value", "unsupported_intent", "unmatched_terms"]
         assessment = clarification.assess(self.ds, state["intent"], suppressed, self.denied_columns(state))
         state["clarification"] = assessment
         if assessment["needs_clarification"] and assessment["signal"] != "unsupported_intent":

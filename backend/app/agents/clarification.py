@@ -97,6 +97,27 @@ def _signals(ds: Dataset, intent: Dict[str, Any], denied: Set[str]) -> List[Dict
                 "options": options[:5],
             })
 
+    # Words that matched nothing. Answering without them silently changes the question
+    # ("students who scored in cs" would become "all students"), so ask first.
+    unknown = intent["unknown_terms"]
+    if unknown and not signals and intent["kind"] != "unknown" and not intent["needs_measure"]:
+        options = []
+        for term in unknown:
+            for c in parser.suggest_columns(term, roles=("measure", "flag", "category"), cutoff=0.75):
+                if c.name not in denied and c.name not in [o["id"] for o in options]:
+                    new_q = re.sub(r"\b%s\b" % re.escape(term), c.label, raw, flags=re.I)
+                    options.append({"id": c.name, "label": c.label[:1].upper() + c.label[1:], "question": new_q})
+        without = re.sub(r"\b(?:%s)\b" % "|".join(re.escape(t) for t in unknown), " ", raw, flags=re.I)
+        without = re.sub(r"\s+", " ", without).strip()
+        quoted = ", ".join(f"“{t}”" for t in unknown)
+        options = options[:3] + [{"id": "ignore_unmatched", "label": f"Answer without {quoted}", "question": without}]
+        signals.append({
+            "type": "unmatched_terms", "weight": 0.7,
+            "detail": f"Couldn't match {quoted} to anything in {ds.name}; answering without {'it' if len(unknown) == 1 else 'them'} would change the question.",
+            "question": f"I couldn't find {quoted} in {ds.name}. What did you mean?",
+            "options": options,
+        })
+
     if intent["kind"] == "unknown":
         unknown = intent["unknown_terms"]
         suggestions = ds.manifest.get("suggestions", [])
