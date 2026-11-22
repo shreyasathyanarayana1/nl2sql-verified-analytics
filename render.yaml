@@ -18,7 +18,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: CORS_ORIGINS
-        value: https://nl2sql-frontend.onrender.com
+        value: https://nl2sql-frontend-jk0z.onrender.com
 
   - type: web
     name: nl2sql-frontend
@@ -31,4 +31,4 @@ services:
       - key: NODE_VERSION
         value: 20.18.0
       - key: NEXT_PUBLIC_API_URL   # baked in at build time; redeploy the frontend after changing it
-        value: https://nl2sql-backend.onrender.com
+        value: https://nl2sql-backend-zo8m.onrender.com
