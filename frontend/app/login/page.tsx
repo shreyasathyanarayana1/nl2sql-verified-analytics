@@ -38,30 +38,30 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <section className="login-hero">
-        <div className="row">
-          <div className="brand-mark">NL</div>
-          <strong style={{ color: "#fff" }}>Verified Analytics</strong>
+        <div>
+          <div className="eyebrow">Verified Analytics</div>
         </div>
         <div>
-          <h1>Ask your database in plain English — and trust the answer.</h1>
+          <h1>Ask the database in plain English. Get an answer you can check.</h1>
           <p>
-            Every generated SQL query is grounded in retrieved schema, checked for schema, semantic and join
-            hallucinations, and repaired before it ever touches the database.
+            A generated query is never trusted on its own. Each draft is verified against the live schema, the stated
+            intent and the real foreign keys, repaired if it fails, and the result is cross-checked after it runs.
           </p>
-          <div className="pipeline-mini">
+          <ol className="pipeline-mini">
             {AGENTS.map((a, i) => (
-              <span key={a} className={a === "Anti-Hallucination" || a === "Repair" ? "hl" : ""}>
-                {i + 1}. {a}
-              </span>
+              <li key={a} className={a === "Anti-Hallucination" || a === "Repair" ? "hl" : ""}>
+                <span>{String(i + 1).padStart(2, "0")}</span>
+                <span>{a}</span>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
-        <p style={{ fontSize: 12 }}>B.M.S. College of Engineering · Dept. of CSE · Major Project</p>
+        <p className="login-foot">B.M.S. College of Engineering · Dept. of CSE · Major Project</p>
       </section>
 
       <div className="login-form-wrap">
         <form className="card login-card" onSubmit={submit}>
-          <h2 style={{ fontSize: 20 }}>Sign in</h2>
+          <h2>Sign in</h2>
           <p className="muted" style={{ margin: "4px 0 0" }}>Choose a demo persona or enter credentials.</p>
 
           <div className="persona">

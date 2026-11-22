@@ -30,7 +30,7 @@ function CheckCard({ report, name }: { report: ValidationReport; name: (typeof C
           ))}
         </ul>
       )}
-      {name.key === "ml_classifier" && !check.skipped && (
+      {name.key === "ml_classifier" && !skipped && (
         <div className="subtle" style={{ fontSize: 12, marginTop: 8 }}>
           Prediction: <strong>{report.checks.ml_classifier.prediction}</strong>
           {report.checks.ml_classifier.confidence !== undefined &&

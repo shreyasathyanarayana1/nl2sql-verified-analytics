@@ -1,10 +1,4 @@
-"""Agent 2 — Query Clarification.
 
-Scores ambiguity from independent signals found by the Intent Agent. Above the threshold
-the pipeline pauses and asks exactly one focused question — built from the dataset's own
-columns — instead of guessing. Every option carries a complete rewritten question, so the
-orchestrator can run each interpretation before deciding whether asking is even necessary.
-"""
 import re
 from typing import Any, Dict, List, Set
 
@@ -57,6 +51,35 @@ def _signals(ds: Dataset, intent: Dict[str, Any], denied: Set[str]) -> List[Dict
                 "question": f"Which measure should I use for {what}?",
                 "options": _measure_options(ds, raw, denied, numeric_only),
             })
+    
+    # Detect an unrecognized grouping requested after "by".
+    group_match = re.search(r"\bby\s+([^,?.;]+)", raw, re.I)
+    if group_match and intent["unknown_terms"] and not intent.get("group_by"):
+        start, end = group_match.span(1)
+        options = []
+
+        for col in ds.columns.values():
+            if col.name in denied:
+                continue
+
+            label = col.label[:1].upper() + col.label[1:]
+            options.append({
+                "id": col.name,
+                "label": label,
+                "question": raw[:start] + col.label + raw[end:]
+            })
+
+        if options:
+            signals.append({
+                "type": "unsupported_intent",
+                "weight": 1.0,
+                "detail": (
+                    f"Couldn't identify the requested grouping "
+                    f"“{group_match.group(1).strip()}” in {ds.name}."
+                ),
+                "question": "Which column did you want to group by?",
+                "options": options[:5],
+            })
 
     for amb in intent["ambiguous_values"]:
         options = []
@@ -73,6 +96,27 @@ def _signals(ds: Dataset, intent: Dict[str, Any], denied: Set[str]) -> List[Dict
                 "question": f"“{amb['phrase'].capitalize()}” what?",
                 "options": options[:5],
             })
+
+    # Words that matched nothing. Answering without them silently changes the question
+    # ("students who scored in cs" would become "all students"), so ask first.
+    unknown = intent["unknown_terms"]
+    if unknown and not signals and intent["kind"] != "unknown" and not intent["needs_measure"]:
+        options = []
+        for term in unknown:
+            for c in parser.suggest_columns(term, roles=("measure", "flag", "category"), cutoff=0.75):
+                if c.name not in denied and c.name not in [o["id"] for o in options]:
+                    new_q = re.sub(r"\b%s\b" % re.escape(term), c.label, raw, flags=re.I)
+                    options.append({"id": c.name, "label": c.label[:1].upper() + c.label[1:], "question": new_q})
+        without = re.sub(r"\b(?:%s)\b" % "|".join(re.escape(t) for t in unknown), " ", raw, flags=re.I)
+        without = re.sub(r"\s+", " ", without).strip()
+        quoted = ", ".join(f"“{t}”" for t in unknown)
+        options = options[:3] + [{"id": "ignore_unmatched", "label": f"Answer without {quoted}", "question": without}]
+        signals.append({
+            "type": "unmatched_terms", "weight": 0.7,
+            "detail": f"Couldn't match {quoted} to anything in {ds.name}; answering without {'it' if len(unknown) == 1 else 'them'} would change the question.",
+            "question": f"I couldn't find {quoted} in {ds.name}. What did you mean?",
+            "options": options,
+        })
 
     if intent["kind"] == "unknown":
         unknown = intent["unknown_terms"]

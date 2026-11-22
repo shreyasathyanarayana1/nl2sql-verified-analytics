@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PipelineResponse } from "@/lib/types";
+import AgentRun from "./AgentRun";
+import Narrative from "./Narrative";
 import PipelineTrace from "./PipelineTrace";
 import { DataTable, downloadCsv, fmt, ResultChart } from "./ResultView";
 import { TrustBadge, TrustPanel } from "./TrustPanel";
@@ -18,7 +20,7 @@ interface Props {
   busy: boolean;
 }
 
-const SEVERITY_ICON = { high: "⚠", medium: "⚠", low: "ℹ" } as const;
+const SEVERITY_TAG = { high: "Caution", medium: "Caveat", low: "Note" } as const;
 
 function Clarification({ response, onClarify, disabled }: { response: PipelineResponse; onClarify: Props["onClarify"]; disabled: boolean }) {
   const c = response.clarification!;
@@ -27,11 +29,11 @@ function Clarification({ response, onClarify, disabled }: { response: PipelineRe
   return (
     <div className="card answer clarify">
       <div className="answer-body">
-        <div className="eyebrow" style={{ color: "var(--warning)" }}>Quick question before I answer</div>
+        <div className="eyebrow" style={{ color: "var(--warning)" }}>Ambiguous — clarification needed</div>
         <div className="clarify-q">{c.question}</div>
-        {hasPreviews && (
+        {hasPreviews && c.options.length > 1 && (
           <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>
-            I tried each option — they give different answers, so it&apos;s worth choosing:
+            Each reading was run against the data. They give different answers, so the choice matters:
           </p>
         )}
         <div className={hasPreviews ? "option-grid" : "chip-row"}>
@@ -72,9 +74,9 @@ function Technical({ response }: { response: PipelineResponse }) {
     <div className="technical">
       <div className="tabs">
         <button className={`tab ${tab === "checks" ? "active" : ""}`} onClick={() => setTab("checks")}>
-          SQL &amp; checks{response.attempts.length > 1 ? ` (${response.attempts.length} drafts)` : ""}
+          SQL drafts &amp; checks{response.attempts.length > 1 ? ` (${response.attempts.length} drafts)` : ""}
         </button>
-        <button className={`tab ${tab === "pipeline" ? "active" : ""}`} onClick={() => setTab("pipeline")}>Step-by-step pipeline</button>
+        <button className={`tab ${tab === "pipeline" ? "active" : ""}`} onClick={() => setTab("pipeline")}>Pipeline log</button>
       </div>
       <div style={{ paddingTop: 14 }}>
         {tab === "checks" && <VerificationPanel response={response} />}
@@ -84,7 +86,22 @@ function Technical({ response }: { response: PipelineResponse }) {
   );
 }
 
-export default function AnswerCard({ response: r, onClarify, clarifyDisabled, onAsk, onEvidence, busy }: Props) {
+/** Replays the agent run first, then reveals the answer under it. */
+export default function AnswerCard(props: Props) {
+  const [revealed, setRevealed] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (revealed) ref.current?.closest(".entry")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [revealed]);
+  return (
+    <div ref={ref} className="answer-stack">
+      <AgentRun response={props.response} onDone={() => setRevealed(true)} />
+      {revealed && <div className="reveal"><AnswerBody {...props} /></div>}
+    </div>
+  );
+}
+
+function AnswerBody({ response: r, onClarify, clarifyDisabled, onAsk, onEvidence, busy }: Props) {
   const [trustOpen, setTrustOpen] = useState(false);
   const [showAnyway, setShowAnyway] = useState(false);
   const [tableOpen, setTableOpen] = useState(false);
@@ -100,7 +117,7 @@ export default function AnswerCard({ response: r, onClarify, clarifyDisabled, on
         <div className="answer-body">
           <div className="eyebrow" style={{ color: "var(--danger)" }}>{r.status === "blocked" ? "Not allowed" : "Couldn't answer this"}</div>
           <div className="answer-explanation">{r.error}</div>
-          {r.warnings.map((w, i) => <div key={i} className="warn-card warn-medium"><span>⚠</span><div>{w}</div></div>)}
+          {r.warnings.map((w, i) => <div key={i} className="warn-card warn-medium"><span className="note-tag">Caveat</span><div>{w}</div></div>)}
           <div className="answer-actions">
             <button className="link-btn" onClick={() => setTechOpen((o) => !o)}>{techOpen ? "Hide details" : "What happened?"}</button>
           </div>
@@ -143,15 +160,15 @@ export default function AnswerCard({ response: r, onClarify, clarifyDisabled, on
 
         {r.auto_resolved && (
           <div className="info-line">
-            <span>💡</span>
+            <span className="note-tag">Resolved</span>
             <span>“{r.auto_resolved.original}” could mean several things — {r.auto_resolved.detail}.</span>
           </div>
         )}
         {repairs > 0 && !trustOpen && (
-          <div className="info-line">
-            <span>🛠</span>
+          <div className="info-line repaired">
+            <span className="note-tag">Repaired</span>
             <span>
-              A mistake in the first SQL draft was caught and fixed before running.{" "}
+              Draft 1 of the SQL was rejected by the verifier and repaired before it ran.{" "}
               <button className="link-btn" onClick={() => setTechOpen(true)}>See what changed</button>
             </span>
           </div>
@@ -159,17 +176,17 @@ export default function AnswerCard({ response: r, onClarify, clarifyDisabled, on
 
         {r.data_warnings.map((w, i) => (
           <div key={i} className={`warn-card warn-${w.severity}`}>
-            <span>{SEVERITY_ICON[w.severity]}</span>
+            <span className="note-tag">{SEVERITY_TAG[w.severity]}</span>
             <div><strong>{w.title}.</strong> {w.detail}</div>
           </div>
         ))}
         {r.warnings.map((w, i) => (
-          <div key={`w${i}`} className="warn-card warn-medium"><span>⚠</span><div>{w}</div></div>
+          <div key={`w${i}`} className="warn-card warn-medium"><span className="note-tag">Caveat</span><div>{w}</div></div>
         ))}
 
         {withheld ? (
           <div className="abstain">
-            <strong>I&apos;m not confident enough in this answer to show it by default.</strong>
+            <strong>Withheld: confidence is below the threshold for showing this result by default.</strong>
             <ul>
               {c!.reasons.filter((x) => x.impact < 0).slice(0, 3).map((x, i) => <li key={i}>{x.text}</li>)}
             </ul>
@@ -192,9 +209,11 @@ export default function AnswerCard({ response: r, onClarify, clarifyDisabled, on
           </>
         )}
 
+        {r.narrative && <Narrative sections={r.narrative.sections} hideFindings={withheld} />}
+
         {r.notes.length > 0 && (
           <div className="assumptions">
-            {r.notes.map((n, i) => <span key={i}>ℹ {n}</span>)}
+            {r.notes.map((n, i) => <span key={i}>{n}</span>)}
           </div>
         )}
 
@@ -206,15 +225,15 @@ export default function AnswerCard({ response: r, onClarify, clarifyDisabled, on
           {result.row_count > 0 && !withheld && (
             <button className="link-btn" onClick={() => downloadCsv(result.columns, result.rows, r.question)}>Download CSV</button>
           )}
-          <button className="link-btn" onClick={() => setTechOpen((o) => !o)}>{techOpen ? "Hide how it was verified" : "How was this verified?"}</button>
+          <button className="link-btn" onClick={() => setTechOpen((o) => !o)}>{techOpen ? "Hide verification record" : "Verification record"}</button>
           <span className="spacer" />
-          <span className="subtle" style={{ fontSize: 12 }}>{(r.latency_ms / 1000).toFixed(2)} s</span>
+          <span className="latency">{(r.latency_ms / 1000).toFixed(2)} s · {r.attempts.length} draft{r.attempts.length === 1 ? "" : "s"}</span>
         </div>
         {techOpen && <Technical response={r} />}
 
         {r.followups.length > 0 && (
           <div className="followups">
-            <span className="subtle">Explore further:</span>
+            <span className="eyebrow" style={{ margin: 0 }}>Next</span>
             {r.followups.map((q) => (
               <button key={q} className="chip chip-sm" disabled={busy} onClick={() => onAsk(q)}>{q}</button>
             ))}

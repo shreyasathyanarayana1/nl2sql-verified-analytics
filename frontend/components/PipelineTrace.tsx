@@ -2,7 +2,7 @@ import type { Ambiguity, Intent, PipelineResponse, SchemaContext, TraceStep } fr
 
 const STEP_NUMBER: Record<string, string> = {
   intent: "1", clarification: "2", schema: "3", access: "3b", planning: "4", generation: "5",
-  verification: "6", repair: "7", execution: "8", result_checks: "8b", quality: "8c", visualization: "9",
+  verification: "6", repair: "7", execution: "8", result_checks: "8b", quality: "8c", visualization: "9", explanation: "10",
 };
 
 function IntentDetail({ intent }: { intent: Intent }) {

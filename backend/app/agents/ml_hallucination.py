@@ -4,6 +4,7 @@ from typing import Any, Dict
 
 import joblib
 
+from app import local_ml
 from app.config import ML_HALLUCINATION_ENABLED, ML_HALLUCINATION_THRESHOLD, ML_HALLUCINATION_MODEL_PATH
 
 LABELS = {0: "valid", 1: "schema", 2: "semantic", 3: "structural"}
@@ -20,7 +21,7 @@ def _load():
     if _model is not None:
         return _model
     try:
-        _model = joblib.load(ML_HALLUCINATION_MODEL_PATH)
+        _model = local_ml.restore_compat(joblib.load(ML_HALLUCINATION_MODEL_PATH))
         return _model
     except Exception as exc:  # noqa: BLE001
         _load_error = f"{type(exc).__name__}: {exc}"

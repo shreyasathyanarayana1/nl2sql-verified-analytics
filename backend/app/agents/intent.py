@@ -72,6 +72,8 @@ correlated depend depends link linked associated association drivers driver fact
 matters important key predict predicts determines explain explains where when why wise level levels type types kind value values
 over under above below exactly equal older younger than up from into about like data dataset records record rows row
 people person vary varies differ likely likelihood chance risk prevalence incidence common hours years percent points
+want wants wanted need needs know see look looking interested wondering curious let lets kindly shown
+am as if so us me ok oh eg ie
 """.split())
 
 
@@ -380,7 +382,8 @@ class IntentParser:
                     intent["kind"] = "unknown"
 
         # 6. words nothing matched
-        leftovers = [w for w in re.findall(r"[a-z][a-z'-]{2,}", work) if w not in STOPWORDS and w not in self.vocabulary
+        # Two-letter words count too: short names such as "cs" or "ai" change the question if dropped.
+        leftovers = [w for w in re.findall(r"[a-z][a-z'-]+", work) if w not in STOPWORDS and w not in self.vocabulary
                      and not self.entity_re.fullmatch(w)]
         intent["unknown_terms"] = list(dict.fromkeys(leftovers))
 

@@ -16,8 +16,12 @@ import { Bar, getElementAtEvent, Line, Pie, Scatter } from "react-chartjs-2";
 import type { DriverFactor, QueryResult, Visualization } from "@/lib/types";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Tooltip, Legend);
+ChartJS.defaults.font.family = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
+ChartJS.defaults.font.size = 11;
+ChartJS.defaults.color = "#57524a";
+ChartJS.defaults.borderColor = "#dbd4c4";
 
-const PALETTE = ["#4338ca", "#0e9384", "#dc6803", "#c11574", "#1570ef", "#6938ef", "#099250", "#b42318"];
+const PALETTE = ["#22406a", "#2c6a3d", "#b07a12", "#8c3b2e", "#5b6b7a", "#6d5a8a", "#3f7f7a", "#a3271d"];
 export const columnLabel = (c: string, labels?: Record<string, string>) => labels?.[c] ?? c.replace(/_/g, " ");
 
 export function fmt(v: unknown): string {
@@ -121,7 +125,7 @@ export function ResultChart({
               datasets: [{
                 label: "Records",
                 data: viz.points.map((p) => ({ x: p.x, y: p.y })),
-                backgroundColor: "rgba(67, 56, 202, 0.55)",
+                backgroundColor: "rgba(34, 64, 106, 0.5)",
                 pointRadius: 4,
                 pointHoverRadius: 6,
               }],
@@ -171,9 +175,9 @@ export function ResultChart({
   const dataset = {
     label: viz.value_label ?? "",
     data: viz.values,
-    backgroundColor: isPie ? viz.labels.map((_, i) => PALETTE[i % PALETTE.length]) : "rgba(67, 56, 202, 0.85)",
-    hoverBackgroundColor: isPie ? undefined : "#312e81",
-    borderColor: viz.chart_type === "line" ? "#4338ca" : undefined,
+    backgroundColor: isPie ? viz.labels.map((_, i) => PALETTE[i % PALETTE.length]) : "rgba(34, 64, 106, 0.88)",
+    hoverBackgroundColor: isPie ? undefined : "#172e4f",
+    borderColor: viz.chart_type === "line" ? "#22406a" : undefined,
     borderRadius: viz.chart_type === "bar" ? 4 : 0,
     barPercentage: viz.chart_type === "histogram" ? 0.98 : 0.8,
     categoryPercentage: viz.chart_type === "histogram" ? 1 : 0.8,

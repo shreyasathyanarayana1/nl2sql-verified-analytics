@@ -1,15 +1,4 @@
-"""Agent 6 — Anti-Hallucination verification.
 
-Three independent checks run on every draft before it may reach the database:
-
-1. Schema validation   — every table/column exists in the *live* catalog and is
-                          permitted for the caller's role (deterministic).
-2. Semantic verification — the SQL answers the stated intent, asked as specific
-                          yes/no questions (deterministic intent-derived checks, plus
-                          an independent LLM pass when a key is configured).
-3. Structural validation — every join condition is a real foreign-key edge
-                          (deterministic graph check).
-"""
 import time
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -24,8 +13,7 @@ OP_NODES = {"=": exp.EQ, ">": exp.GT, ">=": exp.GTE, "<": exp.LT, "<=": exp.LTE,
 
 
 class Resolver:
-    """Maps SQL column references to (table, column) using the query's own aliases."""
-
+   
     def __init__(self, tree: exp.Expression, catalog: Catalog):
         self.catalog = catalog
         self.alias_map: Dict[str, str] = {}
@@ -349,6 +337,7 @@ def verify(sql: str, intent: Dict[str, Any], sem: Semantic, scope: Dict[str, Any
     if not (schema["passed"] and semantic["passed"] and structural["passed"]):
         ml_check["informational_only"] = True
         ml_check["passed"] = True
+        ml_check["errors"] = []
     elif not ml_check.get("passed", True) and ml_check.get("error"):
         ml_check["errors"] = [ml_check["error"]]
     else:

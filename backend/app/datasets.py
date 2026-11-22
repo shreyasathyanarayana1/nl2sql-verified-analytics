@@ -125,7 +125,7 @@ def _needs_import(folder: Path, db_path: Path) -> bool:
 
 
 def import_dataset(folder: Path, force: bool = False) -> Path:
-    manifest = json.loads((folder / "manifest.json").read_text())
+    manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
     db_path = DATA_DIR / f"{manifest['id']}.db"
     if not force and not _needs_import(folder, db_path):
         return db_path
@@ -198,7 +198,7 @@ def _profile(db_path: Path, fact: str, columns: Dict[str, ColumnMeta], lookups: 
 
 def load_dataset(folder: Path) -> Dataset:
     db_path = import_dataset(folder)
-    manifest = json.loads((folder / "manifest.json").read_text())
+    manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
     fact = manifest["fact_table"]
     columns: Dict[str, ColumnMeta] = {}
     for c in manifest["columns"]:
