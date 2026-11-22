@@ -1,0 +1,34 @@
+# Render Blueprint: deploys the FastAPI backend and the Next.js frontend as two web services.
+# If Render gives a service a different URL than the ones below (e.g. adds a suffix because
+# the name is taken), update CORS_ORIGINS / NEXT_PUBLIC_API_URL in the dashboard and redeploy.
+services:
+  - type: web
+    name: nl2sql-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.4          # same version the bundled .pkl models were trained with
+      - key: PYTHONPATH
+        value: .
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://nl2sql-frontend.onrender.com
+
+  - type: web
+    name: nl2sql-frontend
+    runtime: node
+    plan: free
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    startCommand: npx next start -p $PORT
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: NEXT_PUBLIC_API_URL   # baked in at build time; redeploy the frontend after changing it
+        value: https://nl2sql-backend.onrender.com
